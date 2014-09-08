@@ -5,10 +5,16 @@
 #
 #	@author Mashhood Rastgar
 #	@date 06/09/2014
+
 date_default_timezone_set('UTC');
 
 define('STATE_DOWN', 'down');
 define('STATE_UP', 'up');
+
+define('DATABASE','mDevices');
+define('USER_NAME','root');
+define('PASSWORD','');
+define('HOST','localhost');
 
 class Device {
 
@@ -127,6 +133,13 @@ $updatedList = new DeviceCollection();
 $parser = new Parser('network.csv');
 $parser -> collection = $updatedList;
 
+# database
+$con = mysqli_connect(HOST,USER_NAME,PASSWORD,DATABASE);
+if(mysqli_connect_errno()) {
+	echo "Failed to connect to MySQL: " . mysqli_connect_error();
+	exit();
+}
+
 while(true) {
 	echo "Parsing.. \n";
 	$parser -> parse();
@@ -155,10 +168,18 @@ while(true) {
 
 	if(count($updatedList -> devices) > 0) {
 		# use the updatedList to update the server.
+		foreach ($updatedList -> devices as $device) {
+			$query = sprintf("INSERT into devices(mac, status, lastUpdated) VALUES ('%s','%s','%s')",
+				$device -> mac,
+				$device -> status,
+				$device -> lastUpdated);
+
+			mysqli_query($con,$query);
+		}
 	}
 
 	$updatedList -> clear();
-	sleep(3000); # update every 5 mins
+	sleep(60); # update every 5 mins
 }
 
 
