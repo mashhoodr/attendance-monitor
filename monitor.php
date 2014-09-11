@@ -65,26 +65,26 @@ while(file_exists($tempFile)) {
 	echo "Updating to server: \n";
 	print_r($updatedList -> devices);
 
-	// if(count($updatedList -> devices) > 0) {
-	// 	# use the updatedList to update the server.
-	// 	foreach ($updatedList -> devices as $device) {
-	// 		// send the data to the server
-	// 		$url = sprintf("http://dev.marketlytics.com/attend/store.php?mac=%s&lastUpdated=%s&status=%s",
-	// 	    $device -> mac,
-	// 			$device -> status,
-	// 			$device -> lastUpdated
-	// 		);
+	if(count($updatedList -> devices) > 0) {
+		# use the updatedList to update the server.
+		foreach ($updatedList -> devices as $device) {
+			// send the data to the server
+			$url = sprintf("http://dev.marketlytics.com/attend/store.php?mac=%s&lastUpdated=%s&status=%s",
+		    $device -> mac,
+				$device -> status,
+				$device -> lastUpdated
+			);
 
-	// 		$ch = curl_init($url);
-	// 		curl_exec($ch);
-	// 		curl_close($ch);
-	// 	}
-	// }
+			$ch = curl_init($url);
+			curl_exec($ch);
+			curl_close($ch);
+		}
+	}
 
 	unlink(OUTPUT_FILE);
 	$updatedList -> clear();
-	echo "\n\n\n\n\n\n\n";
-	sleep(10); # update every 1 min
+	echo "\n\n\n";
+	sleep(60); # update every 1 min
 }
 
 echo "Monitor terminated!";
