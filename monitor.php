@@ -3,6 +3,12 @@
 # This script monitors a log file from fing app and updates the status of those devices
 # on the server.
 #
+# We run this script using the `screen` utility on linux so it can be
+# started using SSH and keep it running. The script has a auto quit
+# feature where it will quit automatically if we delete the associated
+# file made on creation.
+#
+#
 #	@author Mashhood Rastgar
 #	@date 06/09/2014
 
@@ -37,7 +43,6 @@ while(file_exists($tempFile)) {
 
 	foreach($devices -> devices as $previousDevice) {
 		if(!$updatedList -> contains($previousDevice)) {
-			echo "Device down: " . $previousDevice -> mac . "\n";
 			$previousDevice -> status = STATE_DOWN;
 			$previousDevice -> lastUpdated = strtotime('now');
 			$updatedList -> add($previousDevice);

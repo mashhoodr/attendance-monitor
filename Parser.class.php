@@ -13,7 +13,6 @@ class Parser {
 		$logFile = file_get_contents($this -> fileName);
 		$lines = explode("\n", $logFile);
 		foreach ($lines as $deviceString) {
-			echo $deviceString . "\n";
 			$deviceArray = explode(';', $deviceString);
 
 			if(isset($deviceArray[5]) && count($deviceArray[5]) > 0) {

@@ -21,7 +21,7 @@ $lastUpdated = $_GET['lastUpdated'];
 if(isset($mac) && isset($status) && isset($lastUpdated) &&
 		$mac !== '' && $status !== '' && $lastUpdated !== '') {
 
-	$query = sprintf("INSERT into devices(mac, status, lastUpdated) VALUES ('%s','%s','%s')",
+	$query = sprintf("INSERT into devices(mac, status, lastUpdated) VALUES ('%s','%s',%s)",
 		$mac,
 		$status,
 		$lastUpdated
