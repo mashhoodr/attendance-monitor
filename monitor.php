@@ -12,12 +12,12 @@
 #	@author Mashhood Rastgar
 #	@date 06/09/2014
 
+
+date_default_timezone_set('UTC');
+
 require_once 'Device.class.php';
 require_once 'DeviceCollection.class.php';
 require_once 'Parser.class.php';
-
-
-date_default_timezone_set('UTC');
 
 define('STATE_DOWN', 'down');
 define('STATE_UP', 'up');

@@ -11,7 +11,6 @@ class Device {
 		$this -> lastUpdated = strtotime($lastUpdated);
 		$this -> status = $status;
 	}
-
 }
 
 ?>

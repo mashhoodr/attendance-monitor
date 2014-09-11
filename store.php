@@ -1,18 +1,7 @@
 <?php
 
 # stores the data on the server
-
-define('DATABASE','marketly_witend');
-define('USER_NAME','marketly_witend');
-define('PASSWORD','$}mpFZfv(wDo');
-define('HOST','localhost');
-
-# database
-$con = mysqli_connect(HOST,USER_NAME,PASSWORD,DATABASE);
-if(mysqli_connect_errno()) {
-	echo "Failed to connect to MySQL: " . mysqli_connect_error();
-	exit();
-}
+require_once 'DBService.class.php';
 
 $mac = $_GET['mac'];
 $status = $_GET['status'];
@@ -27,9 +16,10 @@ if(isset($mac) && isset($status) && isset($lastUpdated) &&
 		$lastUpdated
 	);
 
-	mysqli_query($con,$query);
+	$dbService = new DBService();
+	$dbService -> query($query);
 }
 
-echo "This is a sample page.";
+echo "It is done; " . $mac . "\n";
 
 ?>
