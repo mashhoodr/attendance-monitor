@@ -6,143 +6,45 @@
 #	@author Mashhood Rastgar
 #	@date 06/09/2014
 
+require_once 'Device.class.php';
+require_once 'DeviceCollection.class.php';
+require_once 'Parser.class.php';
+
+
 date_default_timezone_set('UTC');
 
 define('STATE_DOWN', 'down');
 define('STATE_UP', 'up');
-
-define('DATABASE','mDevices');
-define('USER_NAME','root');
-define('PASSWORD','');
-define('HOST','localhost');
-
-class Device {
-
-	public $mac;
-	public $lastUpdated;
-	public $status;
-
-	function __construct($lastUpdated, $status, $mac) {
-		$this -> mac = $mac;
-		$this -> lastUpdated = strtotime($lastUpdated);
-		$this -> status = $status;
-	}
-
-}
-
-class DeviceCollection {
-	public  $devices = array();
-
-	public function add($device) {
-		$this -> devices[] = $device;
-	}
-
-	public function get($deviceMac) {
-		foreach ($this -> devices as $device) {
-			if($device -> mac == $deviceMac) {
-				return $device;
-			}
-		}
-
-		return null;
-	}
-
-	public function contains($device) {
-		return ($this -> get($device -> mac) !== null);
-	}
-
-	public function containsExact($device) {
-		$thisDevice = $this -> get($device -> mac);
-		return 	($thisDevice !== null) &&
-						($device -> mac == $thisDevice -> mac) &&
-						($device -> status == $thisDevice -> status);
-	}
-
-	public function clear() {
-		$this -> devices = array();
-	}
-
-	private function sortByDate($a, $b) {
-		return intval($a -> lastUpdated) < intval($b -> lastUpdated);
-	}
-
-	public function filterLatest() {
-		# removes all devices with same MAC
-		# leaves the latest ones in
-		usort($this -> devices, array($this, 'sortByDate'));
-
-		$filtered = new DeviceCollection();
-		foreach ($this -> devices as $device) {
-			if(!$filtered -> contains($device)) {
-				$filtered -> add($device);
-			}
-		}
-
-		$this -> devices = $filtered -> devices;
-		unset($filtered);
-	}
-
-	public function remove($device) {
-		foreach ($this -> devices as $index => $thisDevice) {
-			if($thisDevice -> mac === $device -> mac) {
-				array_splice($this -> devices, $index, 1);
-				break;
-			}
-		}
-	}
-
-	public function update($updatedDevice) {
-		$device = $this -> get($updatedDevice -> mac);
-		$device -> status = $updatedDevice -> status;
-		$device -> lastUpdated = $updatedDevice -> lastUpdated;
-	}
-
-}
-
-class Parser {
-	public $fileName;
-	public $collection;
-
-	function __construct($fileName) {
-		$this -> fileName = $fileName;
-	}
-
-	public function parse() {
-		//2014/09/06 11:49:46;up;192.168.0.1;;;C8:D7:19:D7:85:FB;Cisco Consumer Products
-		$logFile = file_get_contents($this -> fileName);
-		$lines = explode("\n", $logFile);
-		foreach ($lines as $deviceString) {
-			$deviceArray = explode(';', $deviceString);
-			if(count($deviceArray[5]) > 0) {
-				$device = new Device(
-					$deviceArray[0],
-					$deviceArray[1],
-					$deviceArray[5]
-				);
-				$this -> collection -> add($device);
-			}
-		}
-		$this -> collection -> filterLatest();
-	}
-}
-
-/* End of class definitions */
+define('OUTPUT_FILE', 'network.csv');
 
 $devices = new DeviceCollection();
 $updatedList = new DeviceCollection();
-$parser = new Parser('network.csv');
+$parser = new Parser(OUTPUT_FILE);
 $parser -> collection = $updatedList;
 
-# database
-$con = mysqli_connect(HOST,USER_NAME,PASSWORD,DATABASE);
-if(mysqli_connect_errno()) {
-	echo "Failed to connect to MySQL: " . mysqli_connect_error();
-	exit();
-}
+# create a temp file for locking and stopping
+$tempFile = substr(md5(date("mm/dd/yy h:i:s")), 0, 8);
 
-while(true) {
+$fp = fopen($tempFile,"wb");
+fwrite($fp,"");
+fclose($fp);
+
+while(file_exists($tempFile)) {
+	echo "Running the scanner...\n";
+	shell_exec('fing -r 1 -o log,csv,' . OUTPUT_FILE);
 	echo "Parsing.. \n";
 	$parser -> parse();
+
+	foreach($devices -> devices as $previousDevice) {
+		if(!$updatedList -> contains($previousDevice)) {
+			echo "Device down: " . $previousDevice -> mac . "\n";
+			$previousDevice -> status = STATE_DOWN;
+			$previousDevice -> lastUpdated = strtotime('now');
+			$updatedList -> add($previousDevice);
+			$devices -> remove($previousDevice);
+		}
+	}
+
 	foreach ($updatedList -> devices as $updatedDevice) {
 		# If updatedDevice is in the list [as is], remove it from updatedList - update its time on devices
 		if($devices -> contains($updatedDevice)) {
@@ -154,10 +56,7 @@ while(true) {
 			$devices -> update($updatedDevice);
 		} else {
 			# If it is not there, and state is UP, leave it in updatedList and add it to devices
-			# If it is not there, and state is DOWN, remove from updatedList
-			if($updatedDevice -> status === STATE_DOWN) {
-				$updatedList -> remove($updatedDevice);
-			} else {
+			if($updatedDevice -> status === STATE_UP) {
 				$devices -> add($updatedDevice);
 			}
 		}
@@ -166,21 +65,29 @@ while(true) {
 	echo "Updating to server: \n";
 	print_r($updatedList -> devices);
 
-	if(count($updatedList -> devices) > 0) {
-		# use the updatedList to update the server.
-		foreach ($updatedList -> devices as $device) {
-			$query = sprintf("INSERT into devices(mac, status, lastUpdated) VALUES ('%s','%s','%s')",
-				$device -> mac,
-				$device -> status,
-				$device -> lastUpdated);
+	// if(count($updatedList -> devices) > 0) {
+	// 	# use the updatedList to update the server.
+	// 	foreach ($updatedList -> devices as $device) {
+	// 		// send the data to the server
+	// 		$url = sprintf("http://dev.marketlytics.com/attend/store.php?mac=%s&lastUpdated=%s&status=%s",
+	// 	    $device -> mac,
+	// 			$device -> status,
+	// 			$device -> lastUpdated
+	// 		);
 
-			mysqli_query($con,$query);
-		}
-	}
+	// 		$ch = curl_init($url);
+	// 		curl_exec($ch);
+	// 		curl_close($ch);
+	// 	}
+	// }
 
+	unlink(OUTPUT_FILE);
 	$updatedList -> clear();
-	sleep(60); # update every 5 mins
+	echo "\n\n\n\n\n\n\n";
+	sleep(10); # update every 1 min
 }
+
+echo "Monitor terminated!";
 
 
 ?>
