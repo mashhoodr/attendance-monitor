@@ -71,8 +71,8 @@ while(file_exists($tempFile)) {
 			// send the data to the server
 			$url = sprintf("http://dev.marketlytics.com/attend/store.php?mac=%s&lastUpdated=%s&status=%s",
 		    $device -> mac,
-				$device -> status,
-				$device -> lastUpdated
+		    $device -> lastUpdated,
+				$device -> status
 			);
 
 			$ch = curl_init($url);
